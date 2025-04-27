@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>명조 RPG 대미지 시뮬레이터</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>명조 대미지 시뮬레이터</h1>
+    </header>
+    
+    <main class="container">
+        <section class="stat-input-section">
+            <h2>스탯 입력</h2>
+            <div class="stat-groups">
+                <!-- 최종 공격력 -->
+                <div class="stat-group">
+                    <h3>최종 공격력</h3>
+                    <div class="stat-inputs">
+                        <div class="stat-field">
+                            <label for="characterAttack" title="캐릭터의 기본 공격력">캐릭터 공격력</label>
+                            <input type="number" id="characterAttack" min="0" step="1" value="100">
+                        </div>
+                        <div class="stat-field">
+                            <label for="weaponAttack" title="무기의 공격력">무기 공격력</label>
+                            <input type="number" id="weaponAttack" min="0" step="1" value="50">
+                        </div>
+                        <div class="stat-field">
+                            <label for="attackPercentage" title="공격력 증가 퍼센트">공격력%</label>
+                            <input type="number" id="attackPercentage" min="0" step="0.01" value="20">
+                        </div>
+                        <div class="stat-field">
+                            <label for="fixedAttack" title="고정 공격력 증가">고정 공격력</label>
+                            <input type="number" id="fixedAttack" min="0" step="1" value="30">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 총 스킬 배율 -->
+                <div class="stat-group">
+                    <h3>총 스킬 배율</h3>
+                    <div class="stat-inputs">
+                        <div class="stat-field">
+                            <label for="baseSkillRatio" title="기본 스킬 배율">기본 스킬 배율%</label>
+                            <input type="number" id="baseSkillRatio" min="0" step="0.01" value="150">
+                        </div>
+                        <div class="stat-field">
+                            <label for="additionalRatio" title="추가 배율">추가 배율%</label>
+                            <input type="number" id="additionalRatio" min="0" step="0.01" value="30">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 크리티컬 기댓값 -->
+                <div class="stat-group">
+                    <h3>크리티컬 기댓값</h3>
+                    <div class="stat-inputs">
+                        <div class="stat-field">
+                            <label for="critRate" title="크리티컬 확률">크리티컬 확률%</label>
+                            <input type="number" id="critRate" min="0" max="100" step="0.01" value="30">
+                        </div>
+                        <div class="stat-field">
+                            <label for="critDamage" title="크리티컬 시 추가 피해">크리티컬 피해%</label>
+                            <input type="number" id="critDamage" min="0" step="0.01" value="50">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 총 피해 보너스 -->
+                <div class="stat-group">
+                    <h3>총 피해 보너스</h3>
+                    <div class="stat-inputs">
+                        <div class="stat-field">
+                            <label for="damageBonus" title="일반 피해 보너스">피해 보너스%</label>
+                            <input type="number" id="damageBonus" min="0" step="0.01" value="15">
+                        </div>
+                        <div class="stat-field">
+                            <label for="elementDamageBonus" title="속성별 피해 보너스">속성 피해 보너스%</label>
+                            <input type="number" id="elementDamageBonus" min="0" step="0.01" value="10">
+                        </div>
+                        <div class="stat-field">
+                            <label for="attackTypeDamageBonus" title="공격 타입별 피해 보너스">공격 타입 피해 보너스%</label>
+                            <input type="number" id="attackTypeDamageBonus" min="0" step="0.01" value="5">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 총 피해 부스트 -->
+                <div class="stat-group">
+                    <h3>총 피해 부스트</h3>
+                    <div class="stat-inputs">
+                        <div class="stat-field">
+                            <label for="damageBoost" title="일반 피해 부스트">피해 부스트%</label>
+                            <input type="number" id="damageBoost" min="0" step="0.01" value="20">
+                        </div>
+                        <div class="stat-field">
+                            <label for="elementDamageBoost" title="속성별 피해 부스트">속성 피해 부스트%</label>
+                            <input type="number" id="elementDamageBoost" min="0" step="0.01" value="15">
+                        </div>
+                        <div class="stat-field">
+                            <label for="attackTypeDamageBoost" title="공격 타입별 피해 부스트">공격 타입 피해 부스트%</label>
+                            <input type="number" id="attackTypeDamageBoost" min="0" step="0.01" value="10">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 적 방어율 -->
+                <div class="stat-group">
+                    <h3>적 방어율</h3>
+                    <div class="stat-inputs">
+                        <div class="stat-field">
+                            <label for="enemyLevel" title="적의 레벨">적 레벨</label>
+                            <input type="number" id="enemyLevel" min="1" step="1" value="50">
+                        </div>
+                        <div class="stat-field">
+                            <label for="enemyDefense" title="적 방어력 (자동 계산됨)">적 방어력</label>
+                            <input type="number" id="enemyDefense" readonly>
+                        </div>
+                        <div class="stat-field">
+                            <label for="defenseIgnore" title="방어 무시율">방어 무시율%</label>
+                            <input type="number" id="defenseIgnore" min="0" max="100" step="0.01" value="20">
+                        </div>
+                        <div class="stat-field">
+                            <label for="characterLevel" title="캐릭터 레벨">캐릭터 레벨</label>
+                            <input type="number" id="characterLevel" min="1" step="1" value="50">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 적 저항률 -->
+                <div class="stat-group">
+                    <h3>적 저항률</h3>
+                    <div class="stat-inputs">
+                        <div class="stat-field">
+                            <label for="enemyResistance" title="적 저항">적 저항%</label>
+                            <input type="number" id="enemyResistance" min="-100" max="100" step="0.01" value="20">
+                        </div>
+                        <div class="stat-field">
+                            <label for="resistanceReduction" title="저항 감소율">저항 감소율%</label>
+                            <input type="number" id="resistanceReduction" min="0" max="100" step="0.01" value="10">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="calculateBtn" class="primary-btn">대미지 계산</button>
+                <button id="resetBtn" class="secondary-btn">초기화</button>
+                <button id="savePresetBtn" class="secondary-btn">프리셋 저장</button>
+                <button id="loadPresetBtn" class="secondary-btn">프리셋 불러오기</button>
+            </div>
+        </section>
+
+        <section class="result-section">
+            <h2>계산 결과</h2>
+            <div class="damage-result">
+                <h3>최종 대미지</h3>
+                <div id="finalDamage" class="damage-value">0</div>
+            </div>
+
+            <div class="parameter-results">
+                <h3>파라미터 계산 결과</h3>
+                <table class="parameter-table">
+                    <tr>
+                        <td>최종 공격력:</td>
+                        <td id="finalAttackResult">0</td>
+                    </tr>
+                    <tr>
+                        <td>총 스킬 계수:</td>
+                        <td id="totalSkillCoefResult">0</td>
+                    </tr>
+                    <tr>
+                        <td>크리티컬 기댓값:</td>
+                        <td id="critExpectedValueResult">0</td>
+                    </tr>
+                    <tr>
+                        <td>총 피해 보너스:</td>
+                        <td id="totalDamageBonusResult">0</td>
+                    </tr>
+                    <tr>
+                        <td>총 피해 부스트:</td>
+                        <td id="totalDamageBoostResult">0</td>
+                    </tr>
+                    <tr>
+                        <td>적 방어율:</td>
+                        <td id="enemyDefenseRateResult">0</td>
+                    </tr>
+                    <tr>
+                        <td>적 저항률:</td>
+                        <td id="enemyResistanceRateResult">0</td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+        <section class="simulation-section">
+            <h2>스탯 시뮬레이션</h2>
+            <div class="simulation-controls">
+                <div class="sim-field">
+                    <label for="simulationStat">변수 스탯:</label>
+                    <select id="simulationStat">
+                        <!-- 최종 공격력 관련 -->
+                        <option value="characterAttack">캐릭터 공격력</option>
+                        <option value="weaponAttack">무기 공격력</option>
+                        <option value="attackPercentage">공격력%</option>
+                        <option value="fixedAttack">고정 공격력</option>
+                        
+                        <!-- 총 스킬 배율 관련 -->
+                        <option value="baseSkillRatio">기본 스킬 배율%</option>
+                        <option value="additionalRatio">추가 배율%</option>
+                        
+                        <!-- 크리티컬 관련 -->
+                        <option value="critRate">크리티컬 확률%</option>
+                        <option value="critDamage">크리티컬 피해%</option>
+                        
+                        <!-- 총 피해 보너스 관련 -->
+                        <option value="damageBonus">피해 보너스%</option>
+                        <option value="elementDamageBonus">속성 피해 보너스%</option>
+                        <option value="attackTypeDamageBonus">공격 타입 피해 보너스%</option>
+                        
+                        <!-- 총 피해 부스트 관련 -->
+                        <option value="damageBoost">피해 부스트%</option>
+                        <option value="elementDamageBoost">속성 피해 부스트%</option>
+                        <option value="attackTypeDamageBoost">공격 타입 피해 부스트%</option>
+                        
+                        <!-- 적 방어율 관련 -->
+                        <option value="enemyLevel">적 레벨</option>
+                        <option value="defenseIgnore">방어 무시율%</option>
+                        <option value="characterLevel">캐릭터 레벨</option>
+                        
+                        <!-- 적 저항률 관련 -->
+                        <option value="enemyResistance">적 저항%</option>
+                        <option value="resistanceReduction">저항 감소율%</option>
+                    </select>
+                </div>
+                <div class="sim-field">
+                    <label for="simMinValue">최소값:</label>
+                    <input type="number" id="simMinValue" step="0.01" value="0">
+                </div>
+                <div class="sim-field">
+                    <label for="simMaxValue">최대값:</label>
+                    <input type="number" id="simMaxValue" step="0.01" value="100">
+                </div>
+                <div class="sim-field">
+                    <label for="simStepValue">증가 단위:</label>
+                    <input type="number" id="simStepValue" min="0.01" step="0.01" value="5">
+                </div>
+                <button id="runSimulationBtn" class="primary-btn">시뮬레이션 실행</button>
+            </div>
+            
+            <div class="simulation-results">
+                <canvas id="simulationChart"></canvas>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="exportChartBtn" class="secondary-btn">차트 이미지 저장</button>
+                <button id="exportDataBtn" class="secondary-btn">데이터 내보내기 (CSV)</button>
+            </div>
+        </section>
+        
+        <!-- 민감도 분석 섹션 - 독립적인 섹션으로 분리 -->
+        <section class="sensitivity-analysis-section">
+            <h2>민감도 분석</h2>
+            <p>각 스탯을 증가시켰을 때 대미지에 미치는 영향을 분석합니다.</p>
+            
+            <div class="action-buttons">
+                <button id="showSensitivityBtn" class="primary-btn">민감도 분석 설정</button>
+            </div>
+            
+            <!-- 민감도 분석 설정 섹션 -->
+            <div id="sensitivitySettingsSection" class="section" style="display: none;">
+                <h3>민감도 분석 설정</h3>
+                <p>각 스탯의 증가 단위를 설정하세요. 각 스탯에 대해 설정한 값만큼 증가시켜 대미지 변화를 계산합니다.</p>
+                
+                <div class="sensitivity-settings">
+                    <div class="settings-group">
+                        <h4>캐릭터 스탯</h4>
+                        <div class="setting-item">
+                            <label for="charAtkInc">캐릭터 공격력 증가량:</label>
+                            <input type="number" id="charAtkInc" min="1" value="100">
+                        </div>
+                        <div class="setting-item">
+                            <label for="weaponAtkInc">무기 공격력 증가량:</label>
+                            <input type="number" id="weaponAtkInc" min="1" value="100">
+                        </div>
+                        <div class="setting-item">
+                            <label for="atkPctInc">공격력% 증가량:</label>
+                            <input type="number" id="atkPctInc" min="0.1" step="0.1" value="5">
+                        </div>
+                        <div class="setting-item">
+                            <label for="fixedAtkInc">고정 공격력 증가량:</label>
+                            <input type="number" id="fixedAtkInc" min="1" value="100">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4>스킬 계수</h4>
+                        <div class="setting-item">
+                            <label for="skillRatioInc">기본 스킬 배율% 증가량:</label>
+                            <input type="number" id="skillRatioInc" min="0.1" step="0.1" value="10">
+                        </div>
+                        <div class="setting-item">
+                            <label for="additionalRatioInc">추가 배율% 증가량:</label>
+                            <input type="number" id="additionalRatioInc" min="0.1" step="0.1" value="10">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4>크리티컬 스탯</h4>
+                        <div class="setting-item">
+                            <label for="critRateInc">크리티컬 확률% 증가량:</label>
+                            <input type="number" id="critRateInc" min="0.1" step="0.1" value="5">
+                        </div>
+                        <div class="setting-item">
+                            <label for="critDmgInc">크리티컬 대미지% 증가량:</label>
+                            <input type="number" id="critDmgInc" min="0.1" step="0.1" value="10">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4>대미지 보너스</h4>
+                        <div class="setting-item">
+                            <label for="dmgBonusInc">피해 보너스% 증가량:</label>
+                            <input type="number" id="dmgBonusInc" min="0.1" step="0.1" value="5">
+                        </div>
+                        <div class="setting-item">
+                            <label for="elemBonusInc">속성 피해 보너스% 증가량:</label>
+                            <input type="number" id="elemBonusInc" min="0.1" step="0.1" value="5">
+                        </div>
+                        <div class="setting-item">
+                            <label for="atkTypeBonusInc">공격 타입 피해 보너스% 증가량:</label>
+                            <input type="number" id="atkTypeBonusInc" min="0.1" step="0.1" value="5">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4>대미지 부스트</h4>
+                        <div class="setting-item">
+                            <label for="dmgBoostInc">피해 부스트% 증가량:</label>
+                            <input type="number" id="dmgBoostInc" min="0.1" step="0.1" value="5">
+                        </div>
+                        <div class="setting-item">
+                            <label for="elemBoostInc">속성 피해 부스트% 증가량:</label>
+                            <input type="number" id="elemBoostInc" min="0.1" step="0.1" value="5">
+                        </div>
+                        <div class="setting-item">
+                            <label for="atkTypeBoostInc">공격 타입 피해 부스트% 증가량:</label>
+                            <input type="number" id="atkTypeBoostInc" min="0.1" step="0.1" value="5">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4>적 방어율</h4>
+                        <div class="setting-item">
+                            <label for="enemyLevelInc">적 레벨 증가량:</label>
+                            <input type="number" id="enemyLevelInc" min="1" value="1">
+                        </div>
+                        <div class="setting-item">
+                            <label for="defIgnoreInc">방어 무시율% 증가량:</label>
+                            <input type="number" id="defIgnoreInc" min="0.1" step="0.1" value="5">
+                        </div>
+                        <div class="setting-item">
+                            <label for="charLevelInc">캐릭터 레벨 증가량:</label>
+                            <input type="number" id="charLevelInc" min="1" value="1">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h4>적 저항률</h4>
+                        <div class="setting-item">
+                            <label for="enemyResInc">적 저항% 증가량:</label>
+                            <input type="number" id="enemyResInc" min="0.1" step="0.1" value="5">
+                        </div>
+                        <div class="setting-item">
+                            <label for="resReductionInc">저항 감소율% 증가량:</label>
+                            <input type="number" id="resReductionInc" min="0.1" step="0.1" value="5">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="runSensitivityBtn" class="primary-btn">민감도 분석 실행</button>
+                    <button id="resetSensitivitySettingsBtn" class="secondary-btn">기본값으로 초기화</button>
+                </div>
+            </div>
+            
+            <!-- 민감도 분석 섹션 -->
+            <div id="sensitivitySection" class="section" style="display: none;">
+                <h3>민감도 분석 결과</h3>
+                <p>각 스탯을 증가시켰을 때 대미지 변화율을 분석한 결과입니다.</p>
+                <div id="sensitivityResults"></div>
+            </div>
+        </section>
+        
+        <section class="presets-section">
+            <h2>프리셋 관리</h2>
+            <div id="presetsContainer" class="presets-container">
+                <!-- 프리셋 목록이 여기에 표시됩니다 -->
+                <p class="empty-state">저장된 프리셋이 없습니다</p>
+            </div>
+            
+            <div class="preset-form">
+                <div class="form-field">
+                    <label for="presetName">프리셋 이름:</label>
+                    <input type="text" id="presetName" placeholder="프리셋 이름">
+                </div>
+                <div class="form-field">
+                    <label for="presetDescription">설명 (선택사항):</label>
+                    <textarea id="presetDescription" placeholder="프리셋에 대한 설명"></textarea>
+                </div>
+                <div class="action-buttons">
+                    <button id="saveNewPresetBtn" class="primary-btn">새 프리셋 저장</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <div id="presetModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>프리셋 불러오기</h2>
+            <div id="presetList" class="preset-list">
+                <!-- 프리셋 목록이 여기에 표시됩니다 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
