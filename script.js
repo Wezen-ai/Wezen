@@ -187,40 +187,7 @@ function updateEnemyDefense() {
     document.getElementById('enemyDefense').value = enemyDefense;
 }
 
-// 대미지 계산 함수
-function calculateDamage() {
-    // 모든 필요한 스탯 가져오기
-    const stats = getAllStats();
-    
-    // 각 파라미터 계산
-    const finalAttack = calculateFinalAttack(stats);
-    const totalSkillCoef = calculateTotalSkillCoef(stats);
-    const totalDamageBonus = calculateTotalDamageBonus(stats);
-    const totalDamageBoost = calculateTotalDamageBoost(stats);
-    const critExpectedValue = calculateCritExpectedValue(stats);
-    const enemyDefenseRate = calculateEnemyDefenseRate(stats);
-    const enemyResistanceRate = calculateEnemyResistanceRate(stats);
-    
-    // 최종 대미지 계산
-    const finalDamage = finalAttack * totalSkillCoef * totalDamageBonus * 
-                        totalDamageBoost * critExpectedValue * 
-                        enemyDefenseRate * enemyResistanceRate;
-    
-    // 결과 업데이트
-    updateResults(finalDamage, {
-        finalAttack,
-        totalSkillCoef,
-        totalDamageBonus,
-        totalDamageBoost,
-        critExpectedValue,
-        enemyDefenseRate,
-        enemyResistanceRate
-    });
-    
-    return finalDamage;
-}
-
-// 모든 스탯 수집 함수
+// 모든 필요한 스탯 가져오기
 function getAllStats() {
     return {
         characterAttack: Number(document.getElementById('characterAttack').value),
@@ -252,55 +219,94 @@ function getAllStats() {
     };
 }
 
-// 최종 공격력 계산
-function calculateFinalAttack(stats) {
-    return (stats.characterAttack + stats.weaponAttack) * 
-           (1 + stats.attackPercentage) + 
-           stats.fixedAttack;
-}
-
-// 총 스킬 계수 계산
-function calculateTotalSkillCoef(stats) {
-    return stats.baseSkillRatio * (1 + stats.additionalRatio);
-}
-
-// 총 피해 보너스 계산
-function calculateTotalDamageBonus(stats) {
-    return 1 + stats.damageBonus + 
-           stats.elementDamageBonus + 
-           stats.attackTypeDamageBonus;
-}
-
-// 총 피해 부스트 계산
-function calculateTotalDamageBoost(stats) {
-    return 1 + stats.damageBoost + 
-           stats.elementDamageBoost + 
-           stats.attackTypeDamageBoost;
-}
-
-// 크리티컬 기댓값 계산
-function calculateCritExpectedValue(stats) {
-    return (stats.critRate * stats.critDamage) + (1 - stats.critRate);
-}
-
-// 적 방어율 계산
-function calculateEnemyDefenseRate(stats) {
-    const effectiveDefense = stats.enemyDefense * (1 - stats.defenseIgnore);
-    const denominator = effectiveDefense + 800 + (8 * stats.characterLevel);
-    return 1 - (effectiveDefense / denominator);
-}
-
-// 적 저항률 계산
-function calculateEnemyResistanceRate(stats) {
-    const effectiveResistance = stats.enemyResistance - stats.resistanceReduction;
+// 대미지 계산 함수 (스탯 객체 전달 버전)
+function calculateDamageWithStats(stats, updateUI = true) {
+    // 기본 공격력 계산
+    const characterAttack = stats.characterAttack || 0;
+    const weaponAttack = stats.weaponAttack || 0;
+    const attackPercentage = stats.attackPercentage || 0;
+    const fixedAttack = stats.fixedAttack || 0;
+    
+    // 최종 공격력 계산 (캐릭터 공격력 + 무기 공격력) * (1 + 공격력%) + 고정 공격력
+    const finalAttack = (characterAttack + weaponAttack) * (1 + attackPercentage) + fixedAttack;
+    
+    // 스킬 계수 계산 (기본 스킬 배율%) * (1 + 추가 배율%)
+    const baseSkillRatio = stats.baseSkillRatio || 0;
+    const additionalRatio = stats.additionalRatio || 0;
+    const totalSkillCoef = baseSkillRatio * (1 + additionalRatio);
+    
+    // 크리티컬 계산 (크리티컬 확률% * 크리티컬 피해%) + (1 - 크리티컬 확률%)
+    const critRate = Math.min(stats.critRate || 0, 1); // 100%를 넘지 않도록
+    const critDamage = stats.critDamage || 0;
+    const critExpectedValue = (critRate * critDamage) + (1 - critRate);
+    
+    // 대미지 보너스 계산 (1 + 피해 보너스% + 속성 피해 보너스% + 공격 타입 피해 보너스%)
+    const damageBonus = stats.damageBonus || 0;
+    const elementDamageBonus = stats.elementDamageBonus || 0;
+    const attackTypeDamageBonus = stats.attackTypeDamageBonus || 0;
+    const totalDamageBonus = 1 + damageBonus + elementDamageBonus + attackTypeDamageBonus;
+    
+    // 대미지 부스트 계산 (1 + 피해 부스트% + 속성 피해 부스트% + 공격 타입 피해 부스트%)
+    const damageBoost = stats.damageBoost || 0;
+    const elementDamageBoost = stats.elementDamageBoost || 0;
+    const attackTypeDamageBoost = stats.attackTypeDamageBoost || 0;
+    const totalDamageBoost = 1 + damageBoost + elementDamageBoost + attackTypeDamageBoost;
+    
+    // 적 방어율 계산
+    // 1 - ((적 방어력(1 - 방어 무시율%)) / ((적 방어력 (1 - 방어 무시율%)) + 800 + 8 * 캐릭터 레벨))
+    const enemyDefense = stats.enemyDefense || 0;
+    const defenseIgnore = stats.defenseIgnore || 0;
+    const characterLevel = stats.characterLevel || 0;
+    const effectiveDefense = enemyDefense * (1 - defenseIgnore);
+    const enemyDefenseRate = 1 - (effectiveDefense / (effectiveDefense + 800 + 8 * characterLevel));
+    
+    // 적 저항률 계산
+    const enemyResistance = stats.enemyResistance || 0;
+    const resistanceReduction = stats.resistanceReduction || 0;
+    const effectiveResistance = enemyResistance - resistanceReduction;
+    
+    let enemyResistanceRate;
     
     if (effectiveResistance >= 0 && effectiveResistance <= 0.8) {
-        return 1 - effectiveResistance;
+        // 0% <= 적 저항% <= 80%
+        enemyResistanceRate = 1 - effectiveResistance;
     } else if (effectiveResistance < 0) {
-        return 1 - (effectiveResistance / 2);
-    } else { // 저항 > 80%
-        return 1 / (1 + (5 * effectiveResistance));
+        // 적 저항% < 0%
+        enemyResistanceRate = 1 - (effectiveResistance / 2);
+    } else {
+        // 적 저항% > 80%
+        enemyResistanceRate = 1 / (1 + 5 * effectiveResistance);
     }
+    
+    // 최종 대미지 계산
+    let damage = finalAttack * totalSkillCoef * totalDamageBonus * totalDamageBoost * critExpectedValue * enemyDefenseRate * enemyResistanceRate;
+    
+    // 최종 대미지 계산 결과 반환 및 중간 파라미터도 함께 반환
+    const parameters = {
+        finalAttack,
+        totalSkillCoef,
+        critExpectedValue,
+        totalDamageBonus,
+        totalDamageBoost,
+        enemyDefenseRate,
+        enemyResistanceRate
+    };
+    
+    // UI 업데이트 호출 (필요한 경우에만)
+    if (updateUI) {
+        updateResults(damage, parameters);
+    }
+    
+    return Math.round(damage);
+}
+
+// 대미지 계산
+function calculateDamage(updateUI = true) {
+    // 모든 필요한 스탯 가져오기
+    const stats = getAllStats();
+    
+    // 계산 함수 호출 (결과는 함수 내에서 UI 업데이트됨)
+    return calculateDamageWithStats(stats, updateUI);
 }
 
 // 결과 UI 업데이트
@@ -363,8 +369,8 @@ function resetStats() {
     document.getElementById('enemyResistance').value = 40;
     document.getElementById('resistanceReduction').value = 10;
     
-    // 대미지 계산
-    calculateDamage();
+    // 대미지 계산 및 UI 업데이트
+    calculateDamage(true);
 }
 
 // 시뮬레이션 실행
@@ -388,6 +394,7 @@ function runSimulation() {
     // 시뮬레이션 데이터 생성
     const statValues = [];
     const damageValues = [];
+    const displayValues = []; // 화면에 표시될 값 (% 표시용)
     
     // 선택된 스탯의 레이블 텍스트 가져오기
     const statOption = document.querySelector(`option[value="${statName}"]`);
@@ -395,26 +402,37 @@ function runSimulation() {
     
     // 현재 스탯 복사
     const baseStats = getAllStats();
-    const originalValue = baseStats[statName];
+    
+    // 퍼센트 값인지 확인 (이름에 Percentage, Ratio, Rate 등이 포함된 경우)
+    const isPercentage = statName.includes('Percentage') || 
+                        statName.includes('Ratio') || 
+                        statName.includes('Rate') || 
+                        statName.includes('Boost') || 
+                        statName.includes('Ignore') || 
+                        statName.includes('Reduction');
     
     // 시뮬레이션 범위 내에서 대미지 계산
     for (let value = minValue; value <= maxValue; value += stepValue) {
-        statValues.push(value);
+        // 표시용 값은 그대로 저장
+        displayValues.push(value);
+        
+        // 계산용 값 (퍼센트 값은 100으로 나누어 적용)
+        const calcValue = isPercentage ? value / 100 : value;
+        statValues.push(calcValue);
+        
+        // 스탯 객체 복사본 생성
+        const simulatedStats = {...baseStats};
         
         // 스탯 값 업데이트
-        document.getElementById(statName).value = value;
+        simulatedStats[statName] = calcValue;
         
-        // 대미지 계산
-        const damage = calculateDamage();
+        // 복사된 스탯으로 대미지 계산 (UI 업데이트 없이)
+        const damage = calculateDamageWithStats(simulatedStats, false);
         damageValues.push(damage);
     }
     
-    // 원래 값으로 복원
-    document.getElementById(statName).value = originalValue;
-    calculateDamage();
-    
-    // 차트 업데이트
-    updateSimulationChart(statValues, damageValues, statLabel);
+    // 차트 업데이트 (displayValues를 차트 라벨로 사용)
+    updateSimulationChart(displayValues, damageValues, statLabel, isPercentage);
     
     // 최대값/최소값 표시
     const maxDamage = Math.max(...damageValues);
@@ -422,29 +440,30 @@ function runSimulation() {
     const maxDamageIndex = damageValues.indexOf(maxDamage);
     const minDamageIndex = damageValues.indexOf(minDamage);
     
-    console.log(`최대 대미지: ${maxDamage.toLocaleString()} (${statLabel} = ${statValues[maxDamageIndex]})`);
-    console.log(`최소 대미지: ${minDamage.toLocaleString()} (${statLabel} = ${statValues[minDamageIndex]})`);
+    console.log(`최대 대미지: ${maxDamage.toLocaleString()} (${statLabel} = ${displayValues[maxDamageIndex]}${isPercentage ? '%' : ''})`);
+    console.log(`최소 대미지: ${minDamage.toLocaleString()} (${statLabel} = ${displayValues[minDamageIndex]}${isPercentage ? '%' : ''})`);
     
     // 결과 섹션 스크롤
     document.querySelector('.simulation-results').scrollIntoView({ behavior: 'smooth' });
 }
 
 // 시뮬레이션 차트 업데이트
-function updateSimulationChart(labels, damageValues, statName) {
+function updateSimulationChart(labels, damageValues, statName, isPercentage = false) {
     // 기존 데이터 저장
     currentSimulationData = {
         labels: labels,
         values: damageValues,
-        statName: statName
+        statName: statName,
+        isPercentage: isPercentage
     };
     
     // X축 라벨 업데이트
     const statLabels = labels.map(value => {
         // 소수점이 있는 경우 소수점 두 자리까지 표시
         if (Number.isInteger(value)) {
-            return value.toString();
+            return value.toString() + (isPercentage ? '%' : '');
         } else {
-            return value.toFixed(2);
+            return value.toFixed(2) + (isPercentage ? '%' : '');
         }
     });
     
@@ -461,7 +480,7 @@ function updateSimulationChart(labels, damageValues, statName) {
     simulationChart.data.datasets[0].label = `${statName} 변화에 따른 대미지`;
     
     // 축 제목 업데이트
-    simulationChart.options.scales.x.title.text = `${statName} 값`;
+    simulationChart.options.scales.x.title.text = `${statName} 값${isPercentage ? ' (%)' : ''}`;
     
     // 범례 업데이트
     simulationChart.options.plugins.legend.labels.generateLabels = function(chart) {
@@ -583,108 +602,14 @@ function loadPreset(presetId) {
     }
 }
 
-// 현재 상태를 프리셋으로 저장
-function saveCurrentAsPreset() {
-    // 모달 열기
-    openPresetModal();
-    
-    // 입력 필드 초기화
-    document.getElementById('presetName').value = '';
-    document.getElementById('presetDescription').value = '';
-    
-    // 저장 모드로 포커스
-    document.getElementById('presetName').focus();
-}
-
-// 새 프리셋 저장 (설명 포함)
-function saveNewPreset() {
-    const presetName = document.getElementById('presetName').value.trim();
-    const presetDescription = document.getElementById('presetDescription').value.trim();
-    
-    if (!presetName) {
-        alert('프리셋 이름을 입력해주세요.');
-        return;
-    }
-    
-    try {
-        // 현재 스탯 값 가져오기
-        const stats = getAllStats();
-        
-        // 프리셋 객체 생성
-        const newPreset = {
-            id: Date.now().toString(),
-            name: presetName,
-            description: presetDescription,
-            stats: stats,
-            createdAt: new Date().toISOString()
-        };
-        
-        // 프리셋 배열에 추가
-        presets.push(newPreset);
-        
-        // 로컬 스토리지에 저장
-        localStorage.setItem('damagePresets', JSON.stringify(presets));
-        
-        // 입력 필드 초기화
-        document.getElementById('presetName').value = '';
-        document.getElementById('presetDescription').value = '';
-        
-        // 프리셋 목록 다시 로드
-        loadPresets();
-        
-        alert(`프리셋 '${presetName}'이(가) 저장되었습니다.`);
-        
-        // 모달 닫기
-        closePresetModal();
-    } catch (error) {
-        console.error('프리셋 저장 오류:', error);
-        alert('프리셋을 저장하는 중 오류가 발생했습니다.');
-    }
-}
-
-// 프리셋 삭제
-function deletePreset(presetId) {
-    const preset = presets.find(p => p.id === presetId);
-    if (!preset) {
-        alert('프리셋을 찾을 수 없습니다.');
-        return;
-    }
-    
-    if (confirm(`프리셋 '${preset.name}'을(를) 삭제하시겠습니까?`)) {
-        try {
-            // 프리셋 배열에서 삭제
-            const index = presets.findIndex(p => p.id === presetId);
-            if (index !== -1) {
-                presets.splice(index, 1);
-                
-                // 로컬 스토리지 업데이트
-                localStorage.setItem('damagePresets', JSON.stringify(presets));
-                
-                // 프리셋 목록 다시 로드
-                loadPresets();
-                
-                alert(`프리셋 '${preset.name}'이(가) 삭제되었습니다.`);
-            }
-        } catch (error) {
-            console.error('프리셋 삭제 오류:', error);
-            alert('프리셋을 삭제하는 중 오류가 발생했습니다.');
-        }
-    }
-}
-
 // 프리셋 모달 닫기
 function closePresetModal() {
-    // 모달 요소 직접 선택해서 숨김 처리
     const modal = document.getElementById('presetModal');
     modal.style.display = 'none';
 }
 
 // 프리셋 모달 열기
 function openPresetModal() {
-    // 프리셋 목록 새로고침
-    loadPresets();
-    
-    // 모달 표시
     const modal = document.getElementById('presetModal');
     modal.style.display = 'block';
 }
@@ -716,10 +641,12 @@ function exportDataAsCSV() {
     }
     
     // CSV 데이터 생성
-    let csvContent = `${currentSimulationData.statName},대미지\n`;
+    let csvContent = `${currentSimulationData.statName}${currentSimulationData.isPercentage ? '(%)' : ''},대미지\n`;
     
     for (let i = 0; i < currentSimulationData.labels.length; i++) {
-        csvContent += `${currentSimulationData.labels[i]},${currentSimulationData.values[i]}\n`;
+        // 비율(%) 값인 경우 % 기호 표시
+        const labelValue = currentSimulationData.labels[i];
+        csvContent += `${labelValue}${currentSimulationData.isPercentage ? '%' : ''},${currentSimulationData.values[i]}\n`;
     }
     
     // Blob 생성 및 다운로드
@@ -831,13 +758,13 @@ function runSensitivityAnalysis() {
     document.getElementById('sensitivitySettingsSection').style.display = 'none';
     
     // 현재 스탯 값들 가져오기
-    const stats = getAllStats();
+    const baseStats = getAllStats();
     
     // 사용자 설정 증가량 가져오기
     const increments = getSensitivityIncrements();
     
     // 기본 대미지 계산 (비교 기준)
-    const baseDamage = calculateDamage();
+    const baseDamage = calculateDamageWithStats(baseStats, false);
     
     // 분석할 스탯 그룹 정의
     const statGroups = {
@@ -906,34 +833,28 @@ function runSensitivityAnalysis() {
         statsList.forEach(statInfo => {
             const { name, key, increment, unit, isNegative } = statInfo;
             
-            // 현재 스탯 값 가져오기 (입력 필드에서)
-            const inputElement = document.getElementById(key);
-            const currentValue = inputElement ? inputElement.value : 0;
+            // 현재 스탯 값 가져오기 (베이스 스탯에서)
+            const currentValue = baseStats[key];
             
-            // 원래 값 저장
-            const originalValue = document.getElementById(key).value;
+            // 새로운 스탯을 위한 객체 복사
+            const simulatedStats = {...baseStats};
             
             // 새로운 스탯 값 설정 (증가량 더하기)
-            let newValue;
-            
             if (unit === '%') {
                 // 퍼센트 값인 경우 (현재 값에 증가량 더하기)
-                newValue = Number(originalValue) + (increment * 100);  // UI에는 퍼센트로 표시되므로 100 곱함
+                simulatedStats[key] = currentValue + increment;
             } else {
                 // 일반 값인 경우
-                newValue = Number(originalValue) + increment;
+                simulatedStats[key] = currentValue + increment;
             }
-            
-            // 입력 필드에 새 값 설정
-            document.getElementById(key).value = newValue;
             
             // 적 레벨이 변경되면 적 방어력도 업데이트
             if (key === 'enemyLevel') {
-                updateEnemyDefense();
+                simulatedStats.enemyDefense = 792 + (8 * simulatedStats.enemyLevel);
             }
             
-            // 새 대미지 계산
-            const newDamage = calculateDamage();
+            // 새 대미지 계산 (UI 업데이트 없이)
+            const newDamage = calculateDamageWithStats(simulatedStats, false);
             
             // 변화율 계산
             let changePercent;
@@ -964,26 +885,23 @@ function runSensitivityAnalysis() {
                 `+${(increment * 100).toFixed(1)}${unit}` : 
                 `+${increment}${unit}`;
             
+            // 표시할 현재 값 (단위 적용)
+            const displayValue = unit === '%' ? 
+                `${(currentValue * 100).toFixed(1)}${unit}` : 
+                `${currentValue}${unit}`;
+            
             // 민감도 데이터 저장
             currentSensitivityData.push({
                 group: groupName,
                 name: name,
-                originalValue: originalValue + unit,
+                originalValue: displayValue,
                 increment: displayIncrement,
                 newDamage: newDamage,
                 changePercent: formattedChangePercent,
                 impact: impactClass,
                 isPositive: isPositive,
-                absChangeValue: absChange  // 영향도 순위 매기기 위한 절대값 저장
+                absChangeValue: absChange  // 영향도 순기 매기기 위한 절대값 저장
             });
-            
-            // 원래 값으로 복원
-            document.getElementById(key).value = originalValue;
-            
-            // 적 레벨이 변경되었으면 적 방어력도 복원
-            if (key === 'enemyLevel') {
-                updateEnemyDefense();
-            }
         });
     }
     
@@ -1039,9 +957,6 @@ function runSensitivityAnalysis() {
             resultsContainer.appendChild(resultRow);
         });
     });
-    
-    // 최종 대미지 재계산 (원래 상태로 복원)
-    calculateDamage();
     
     // 결론 생성 버튼 추가
     const conclusionButtonContainer = document.createElement('div');
@@ -1100,20 +1015,40 @@ function showConclusion() {
     topStats.forEach(stat => {
         const listItem = document.createElement('li');
         
+        // 스탯 영향도에 따른 배경색 지정
+        listItem.className = stat.impact;
+        
         if (stat.name.includes('적') && (stat.name.includes('레벨') || stat.name.includes('저항'))) {
             // 적 스탯은 감소가 유리함을 표시
             listItem.innerHTML = `
-                <span class="${stat.impact}">${stat.name}</span>: 
+                <strong>${stat.name}</strong>: 
                 <span class="${stat.impact}">${stat.changePercent}%</span> 
                 (${stat.group})
-                - <strong>감소시키는 것이 유리</strong>
+                - <strong>감소시키는 것이 유리합니다</strong>
+                <p class="stat-tip">설명: 적 ${stat.name}은 높을수록 캐릭터의 대미지가 감소합니다. 가능한 낮은 ${stat.name}의 적을 상대하거나, ${stat.name} 감소 효과를 가진 스킬/아이템을 활용하세요.</p>
             `;
         } else {
             const changeDirection = stat.isPositive ? '증가' : '감소';
+            const effectPerPoint = (parseFloat(stat.changePercent) / (parseFloat(stat.increment.replace(/[+%]/g, '')))).toFixed(2);
+            
+            let tipText = '';
+            // 스탯 유형별 팁 추가
+            if (stat.group === '공격력 관련') {
+                tipText = `공격력은 대미지 계산의 기본이 되는 중요한 요소입니다. 1포인트 증가 시 약 ${effectPerPoint}%의 대미지 상승 효과가 있습니다.`;
+            } else if (stat.group === '스킬 계수') {
+                tipText = `스킬 계수는 스킬 레벨업이나 특정 특성 선택으로 증가시킬 수 있습니다. 1% 증가 시 약 ${effectPerPoint}%의 대미지 상승 효과가 있습니다.`;
+            } else if (stat.group === '크리티컬 스탯') {
+                tipText = `크리티컬 관련 스탯은 높은 폭발력을 제공합니다. 1% 증가 시 약 ${effectPerPoint}%의 대미지 상승 효과가 있으며, 크리티컬 확률이 높을수록 크리티컬 대미지의 효율이 올라갑니다.`;
+            } else if (stat.group.includes('대미지')) {
+                tipText = `${stat.group}는 최종 대미지 계산 시 곱연산으로 적용되어 효율이 좋습니다. 1% 증가 시 약 ${effectPerPoint}%의 대미지 상승 효과가 있습니다.`;
+            }
+            
             listItem.innerHTML = `
-                <span class="${stat.impact}">${stat.name}</span>: 
+                <strong>${stat.name}</strong>: 
                 <span class="${stat.impact}">${stat.isPositive ? '+' : ''}${stat.changePercent}%</span> 
                 ${changeDirection} (${stat.group})
+                <p class="stat-tip">효율: 1포인트당 약 ${effectPerPoint}% 대미지 변화</p>
+                <p class="stat-tip">설명: ${tipText}</p>
             `;
         }
         
@@ -1122,42 +1057,172 @@ function showConclusion() {
     
     conclusionContent.appendChild(conclusionList);
     
-    // 종합 조언 추가
-    const advice = document.createElement('div');
-    advice.className = 'conclusion-advice sensitivity-description';
+    // 종합 투자 전략 추가
+    const strategySection = document.createElement('div');
+    strategySection.className = 'strategy-section';
     
-    // 높은 영향도를 가진 스탯을 기반으로 조언 생성
-    const highImpactStats = topStats.filter(stat => 
-        stat.impact === 'high-impact' && stat.isPositive);
+    // 영향도가 높은 스탯들 그룹화
+    const highImpactAttack = topStats.filter(stat => 
+        stat.impact === 'high-impact' && 
+        stat.group === '공격력 관련' && 
+        stat.isPositive
+    );
     
-    let adviceText = '';
+    const highImpactCrit = topStats.filter(stat => 
+        stat.impact === 'high-impact' && 
+        stat.group === '크리티컬 스탯' && 
+        stat.isPositive
+    );
     
-    if (highImpactStats.length > 0) {
-        adviceText += '<p><strong>최우선 투자 스탯:</strong> ';
-        adviceText += highImpactStats
-            .map(stat => `<span class="high-impact">${stat.name}</span>`)
-            .join(', ');
-        adviceText += '</p>';
+    const highImpactDamage = topStats.filter(stat => 
+        stat.impact === 'high-impact' && 
+        (stat.group.includes('대미지') || stat.group.includes('스킬 계수')) && 
+        stat.isPositive
+    );
+    
+    // 투자 전략 헤더
+    const strategyHeader = document.createElement('h3');
+    strategyHeader.textContent = '최적 투자 전략';
+    strategySection.appendChild(strategyHeader);
+    
+    // 전략 내용
+    const strategyContent = document.createElement('div');
+    strategyContent.className = 'strategy-content';
+    
+    let strategyHTML = '<p><strong>단기 투자:</strong> ';
+    
+    if (highImpactAttack.length > 0) {
+        strategyHTML += `${highImpactAttack.map(s => `<span class="high-impact">${s.name}</span>`).join(', ')}에 우선 투자하여 기본 전투력을 향상시키세요. `;
     }
     
-    // 적 스탯에 대한 조언 추가
+    if (highImpactCrit.length > 0) {
+        strategyHTML += `${highImpactCrit.map(s => `<span class="high-impact">${s.name}</span>`).join(', ')}를 균형있게 높여 크리티컬 효율을 최대화하세요. `;
+    }
+    
+    if (highImpactDamage.length > 0) {
+        strategyHTML += `${highImpactDamage.map(s => `<span class="high-impact">${s.name}</span>`).join(', ')}를 통해 최종 대미지를 증폭시키세요.`;
+    }
+    
+    strategyHTML += '</p>';
+    
+    // 밸런스 투자 전략
+    strategyHTML += '<p><strong>밸런스 투자:</strong> ';
+    
+    if (topStats.length > 0) {
+        const balanceStats = topStats.filter(stat => stat.isPositive).slice(0, 3);
+        if (balanceStats.length > 0) {
+            strategyHTML += `${balanceStats.map(s => `<span class="${s.impact}">${s.name}</span>`).join(', ')}의 균형있는 상승이 최고의 효율을 제공합니다.`;
+        }
+    }
+    
+    strategyHTML += '</p>';
+    
+    // 적 상대 전략
     const enemyStats = topStats.filter(stat => 
-        (stat.group === '적 방어율' || stat.group === '적 저항률') && 
-        (stat.name.includes('레벨') || stat.name.includes('저항')));
+        !stat.isPositive && (stat.name.includes('적') || stat.name.includes('저항') || stat.name.includes('방어'))
+    );
     
     if (enemyStats.length > 0) {
-        adviceText += '<p><strong>주의할 적 특성:</strong> ';
-        adviceText += enemyStats
-            .map(stat => `<span class="${stat.impact}">${stat.name}</span>`)
-            .join(', ');
-        adviceText += ' - 이러한 적 특성이 높은 상대는 피하거나 저항/방어 감소 효과를 사용하는 것이 좋습니다.</p>';
+        strategyHTML += '<p><strong>적 상대 전략:</strong> ';
+        strategyHTML += `${enemyStats.map(s => `<span class="${s.impact}">${s.name}</span>`).join(', ')}에 주의하세요. `;
+        strategyHTML += '이러한 요소가 낮은 적을 우선적으로 상대하거나, 해당 요소를 감소시키는 효과를 가진 스킬/아이템을 활용하세요.';
+        strategyHTML += '</p>';
     }
     
-    if (adviceText) {
-        advice.innerHTML = adviceText;
-        conclusionContent.appendChild(advice);
-    }
+    strategyContent.innerHTML = strategyHTML;
+    strategySection.appendChild(strategyContent);
+    
+    conclusionContent.appendChild(strategySection);
     
     // 결론 섹션으로 스크롤
     conclusionSection.scrollIntoView({ behavior: 'smooth' });
+}
+
+// 현재 상태를 프리셋으로 저장
+function saveCurrentAsPreset() {
+    // 모달 열기
+    openPresetModal();
+    
+    // 입력 필드 초기화
+    document.getElementById('presetName').value = '';
+    document.getElementById('presetDescription').value = '';
+    
+    // 저장 모드로 포커스
+    document.getElementById('presetName').focus();
+}
+
+// 새 프리셋 저장 (설명 포함)
+function saveNewPreset() {
+    const presetName = document.getElementById('presetName').value.trim();
+    const presetDescription = document.getElementById('presetDescription').value.trim();
+    
+    if (!presetName) {
+        alert('프리셋 이름을 입력해주세요.');
+        return;
+    }
+    
+    try {
+        // 현재 스탯 값 가져오기
+        const stats = getAllStats();
+        
+        // 프리셋 객체 생성
+        const newPreset = {
+            id: Date.now().toString(),
+            name: presetName,
+            description: presetDescription,
+            stats: stats,
+            createdAt: new Date().toISOString()
+        };
+        
+        // 프리셋 배열에 추가
+        presets.push(newPreset);
+        
+        // 로컬 스토리지에 저장
+        localStorage.setItem('damagePresets', JSON.stringify(presets));
+        
+        // 입력 필드 초기화
+        document.getElementById('presetName').value = '';
+        document.getElementById('presetDescription').value = '';
+        
+        // 프리셋 목록 다시 로드
+        loadPresets();
+        
+        alert(`프리셋 '${presetName}'이(가) 저장되었습니다.`);
+        
+        // 모달 닫기
+        closePresetModal();
+    } catch (error) {
+        console.error('프리셋 저장 오류:', error);
+        alert('프리셋을 저장하는 중 오류가 발생했습니다.');
+    }
+}
+
+// 프리셋 삭제
+function deletePreset(presetId) {
+    const preset = presets.find(p => p.id === presetId);
+    if (!preset) {
+        alert('프리셋을 찾을 수 없습니다.');
+        return;
+    }
+    
+    if (confirm(`프리셋 '${preset.name}'을(를) 삭제하시겠습니까?`)) {
+        try {
+            // 프리셋 배열에서 삭제
+            const index = presets.findIndex(p => p.id === presetId);
+            if (index !== -1) {
+                presets.splice(index, 1);
+                
+                // 로컬 스토리지 업데이트
+                localStorage.setItem('damagePresets', JSON.stringify(presets));
+                
+                // 프리셋 목록 다시 로드
+                loadPresets();
+                
+                alert(`프리셋 '${preset.name}'이(가) 삭제되었습니다.`);
+            }
+        } catch (error) {
+            console.error('프리셋 삭제 오류:', error);
+            alert('프리셋을 삭제하는 중 오류가 발생했습니다.');
+        }
+    }
 }
