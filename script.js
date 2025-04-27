@@ -62,6 +62,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 민감도 분석 설정 초기화 (알림 없이)
     resetSensitivitySettings(false);
+    
+    // 페이지 로드 시 적 저항 입력 필드 숨기기
+    const enemyResistanceField = document.querySelector('[for="enemyResistanceInc"]');
+    if (enemyResistanceField) {
+        const parentElement = enemyResistanceField.parentElement;
+        if (parentElement) {
+            parentElement.style.display = 'none';
+        }
+    }
 });
 
 // 차트 초기화 함수
@@ -409,7 +418,10 @@ function runSimulation() {
                         statName.includes('Rate') || 
                         statName.includes('Boost') || 
                         statName.includes('Ignore') || 
-                        statName.includes('Reduction');
+                        statName.includes('Reduction') ||
+                        statName.includes('Resistance') ||
+                        statName.includes('Damage') ||
+                        statName.includes('Bonus');
     
     // 시뮬레이션 범위 내에서 대미지 계산
     for (let value = minValue; value <= maxValue; value += stepValue) {
@@ -425,6 +437,11 @@ function runSimulation() {
         
         // 스탯 값 업데이트
         simulatedStats[statName] = calcValue;
+        
+        // 적 레벨이 변경되면 적 방어력도 업데이트
+        if (statName === 'enemyLevel') {
+            simulatedStats.enemyDefense = 792 + (8 * simulatedStats.enemyLevel);
+        }
         
         // 복사된 스탯으로 대미지 계산 (UI 업데이트 없이)
         const damage = calculateDamageWithStats(simulatedStats, false);
@@ -706,8 +723,14 @@ function resetSensitivitySettings(showAlert = true) {
     document.getElementById('enemyLevelInc').value = -1;
     document.getElementById('charLevelInc').value = 1;
     
-    // 적 저항률 초기화 (적 저항 제거, 저항 감소율만 유지)
+    // 적 저항률 초기화
     document.getElementById('resReductionInc').value = 0.61;
+    
+    // HTML에서 적 저항 관련 입력 필드 숨기기
+    const enemyResistanceField = document.querySelector('[for="enemyResistanceInc"]').parentElement;
+    if (enemyResistanceField) {
+        enemyResistanceField.style.display = 'none';
+    }
     
     // 매개변수에 따라 알림 표시 여부 결정
     if (showAlert) {
@@ -747,7 +770,7 @@ function getSensitivityIncrements() {
         enemyLevel: Number(document.getElementById('enemyLevelInc').value),
         characterLevel: Number(document.getElementById('charLevelInc').value),
         
-        // 적 저항률 (적 저항 항목 제거)
+        // 적 저항률
         resistanceReduction: Number(document.getElementById('resReductionInc').value) / 100
     };
 }
@@ -840,13 +863,7 @@ function runSensitivityAnalysis() {
             const simulatedStats = {...baseStats};
             
             // 새로운 스탯 값 설정 (증가량 더하기)
-            if (unit === '%') {
-                // 퍼센트 값인 경우 (현재 값에 증가량 더하기)
-                simulatedStats[key] = currentValue + increment;
-            } else {
-                // 일반 값인 경우
-                simulatedStats[key] = currentValue + increment;
-            }
+            simulatedStats[key] = currentValue + increment;
             
             // 적 레벨이 변경되면 적 방어력도 업데이트
             if (key === 'enemyLevel') {
@@ -1057,82 +1074,26 @@ function showConclusion() {
     
     conclusionContent.appendChild(conclusionList);
     
-    // 종합 투자 전략 추가
-    const strategySection = document.createElement('div');
-    strategySection.className = 'strategy-section';
-    
-    // 영향도가 높은 스탯들 그룹화
-    const highImpactAttack = topStats.filter(stat => 
-        stat.impact === 'high-impact' && 
-        stat.group === '공격력 관련' && 
-        stat.isPositive
-    );
-    
-    const highImpactCrit = topStats.filter(stat => 
-        stat.impact === 'high-impact' && 
-        stat.group === '크리티컬 스탯' && 
-        stat.isPositive
-    );
-    
-    const highImpactDamage = topStats.filter(stat => 
-        stat.impact === 'high-impact' && 
-        (stat.group.includes('대미지') || stat.group.includes('스킬 계수')) && 
-        stat.isPositive
-    );
-    
-    // 투자 전략 헤더
-    const strategyHeader = document.createElement('h3');
-    strategyHeader.textContent = '최적 투자 전략';
-    strategySection.appendChild(strategyHeader);
-    
-    // 전략 내용
-    const strategyContent = document.createElement('div');
-    strategyContent.className = 'strategy-content';
-    
-    let strategyHTML = '<p><strong>단기 투자:</strong> ';
-    
-    if (highImpactAttack.length > 0) {
-        strategyHTML += `${highImpactAttack.map(s => `<span class="high-impact">${s.name}</span>`).join(', ')}에 우선 투자하여 기본 전투력을 향상시키세요. `;
-    }
-    
-    if (highImpactCrit.length > 0) {
-        strategyHTML += `${highImpactCrit.map(s => `<span class="high-impact">${s.name}</span>`).join(', ')}를 균형있게 높여 크리티컬 효율을 최대화하세요. `;
-    }
-    
-    if (highImpactDamage.length > 0) {
-        strategyHTML += `${highImpactDamage.map(s => `<span class="high-impact">${s.name}</span>`).join(', ')}를 통해 최종 대미지를 증폭시키세요.`;
-    }
-    
-    strategyHTML += '</p>';
-    
-    // 밸런스 투자 전략
-    strategyHTML += '<p><strong>밸런스 투자:</strong> ';
-    
-    if (topStats.length > 0) {
-        const balanceStats = topStats.filter(stat => stat.isPositive).slice(0, 3);
-        if (balanceStats.length > 0) {
-            strategyHTML += `${balanceStats.map(s => `<span class="${s.impact}">${s.name}</span>`).join(', ')}의 균형있는 상승이 최고의 효율을 제공합니다.`;
-        }
-    }
-    
-    strategyHTML += '</p>';
-    
     // 적 상대 전략
     const enemyStats = topStats.filter(stat => 
         !stat.isPositive && (stat.name.includes('적') || stat.name.includes('저항') || stat.name.includes('방어'))
     );
     
     if (enemyStats.length > 0) {
-        strategyHTML += '<p><strong>적 상대 전략:</strong> ';
-        strategyHTML += `${enemyStats.map(s => `<span class="${s.impact}">${s.name}</span>`).join(', ')}에 주의하세요. `;
-        strategyHTML += '이러한 요소가 낮은 적을 우선적으로 상대하거나, 해당 요소를 감소시키는 효과를 가진 스킬/아이템을 활용하세요.';
-        strategyHTML += '</p>';
+        const enemySection = document.createElement('div');
+        enemySection.className = 'enemy-strategy-section';
+        
+        const enemyHeader = document.createElement('h3');
+        enemyHeader.textContent = '적 상대 전략';
+        enemySection.appendChild(enemyHeader);
+        
+        const enemyContent = document.createElement('p');
+        enemyContent.innerHTML = `${enemyStats.map(s => `<span class="${s.impact}">${s.name}</span>`).join(', ')}에 주의하세요. `;
+        enemyContent.innerHTML += '이러한 요소가 낮은 적을 우선적으로 상대하거나, 해당 요소를 감소시키는 효과를 가진 스킬/아이템을 활용하세요.';
+        
+        enemySection.appendChild(enemyContent);
+        conclusionContent.appendChild(enemySection);
     }
-    
-    strategyContent.innerHTML = strategyHTML;
-    strategySection.appendChild(strategyContent);
-    
-    conclusionContent.appendChild(strategySection);
     
     // 결론 섹션으로 스크롤
     conclusionSection.scrollIntoView({ behavior: 'smooth' });
